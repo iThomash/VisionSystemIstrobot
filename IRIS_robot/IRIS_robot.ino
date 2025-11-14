@@ -1,5 +1,5 @@
 #include <Arduino_FreeRTOS.h>
-#include <queue.h>  // queue something
+#include <queue.h>
 #include <ArduinoJson.h>
 
 //Servos
@@ -20,7 +20,7 @@
 #define HCSR_LEFT_LB 40
 #define HCSR_LEFT_MB 38
 
-//Color sensors
+//Reflection sensors
 #define C1 A13
 #define C2 A12
 #define C3 A14
@@ -120,7 +120,6 @@ int n = 3;
 int n_coeff = 1;
 bool change_n = false;
 bool opponentAhead = false;
-// int rectanglePoints[3][2] = {{1,4},{2,1},{3,4}};
 int rectanglePoints[4][2] = { { 1, 4 }, { 1, 1 }, { 3, 1 }, { 3, 4 } };
 // int rectanglePoints[4][2] = {{1,2},{1,1},{3,1},{3,2}};
 int cantrix[5][5] = { { 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0 } };
@@ -130,7 +129,7 @@ int distanceCost[5][5] = { { 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0
 bool goingToBase = false;
 bool puttingBackCans = false;
 
-//Misc
+// Misc
 #define BUZZER 8
 
 // Functions to read distance sensor values
@@ -276,14 +275,7 @@ void moveBack(int dist) {
     }
 
     unsigned int tempTime = abs(millis() - previousCrossingTimestamp);
-    // Serial.print("Crossing detection");
-    // Serial.print(keepLineOn);
-    // Serial.print(";");
-    // Serial.print(puttingBackCans);
-    // Serial.print(";");
-    // Serial.print(readSensor(rightLineSensorPins[2]) || readSensor(leftLineSensorPins[2]));
-    // Serial.print(";");
-    // Serial.println(tempTime);
+
     if ((readSensor(rightLineSensorPins[2]) || readSensor(leftLineSensorPins[2])) && keepLineOn == false && puttingBackCans == true) {
       previousCrossingTimestamp = millis();
       keepLineOn = true;
@@ -362,7 +354,6 @@ void rotateBy(int angle, bool sensored = true) {
             digitalWrite(R_DIR, HIGH);
             bothMotorStep(200);
           }
-          // }
           break;
         case 90:
           while (!readSensor(C9)) {
@@ -384,7 +375,6 @@ void rotateBy(int angle, bool sensored = true) {
           }
       }
     } else {
-      // Serial.println("We used the different sensor!");
       switch (angle) {
         case -90:
           while (!readSensor(sensorValue)) {
@@ -394,10 +384,6 @@ void rotateBy(int angle, bool sensored = true) {
               && readSensor(frontLineSensorPins[0]) == 0 && readSensor(frontLineSensorPins[1]) == 0 && readSensor(frontLineSensorPins[2]) == 0 && readSensor(frontLineSensorPins[3]) == 0 && readSensor(frontLineSensorPins[4]) == 0) {
             bothMotorStep(200);
           }
-          // digitalWrite(L_DIR, LOW);
-          // digitalWrite(R_DIR, HIGH);
-          // bothMotorStep(200);
-          // }
           break;
         case 90:
           while (!readSensor(sensorValue)) {
@@ -407,9 +393,6 @@ void rotateBy(int angle, bool sensored = true) {
           && readSensor(frontLineSensorPins[0]) == 0 && readSensor(frontLineSensorPins[1]) == 0 && readSensor(frontLineSensorPins[2]) == 0 && readSensor(frontLineSensorPins[3]) == 0 && readSensor(frontLineSensorPins[4]) == 0) {
             bothMotorStep(200);
           }
-          // digitalWrite(L_DIR, HIGH);
-          // digitalWrite(R_DIR, LOW);
-          // bothMotorStep(200);
           break;
         case 180:
           while (!readSensor(C14)) {
@@ -504,7 +487,7 @@ void returnCans() {
 
 
   goingToBase = false;
-  n = 3;  // idk
+  n = 3;
   n_coeff = 1;
   puttingBackCans = false;
   opponentAhead = false;
@@ -606,30 +589,22 @@ void MakeMeasurements(void *pvParameters) {
       Serial.print("{\"action\": 1}");
       CurrentAction = Stop;
       if (valueFromQueue == 1 || valueFromQueue == 2) {
-        // Serial.print("Robot position at making measurements ");
-        // Serial.print(robotPosition.posX);
-        // Serial.print(";");
-        // Serial.print(robotPosition.posY);
-        // Serial.print(";");
-        // Serial.print(robotPosition.rot);
-        // Serial.println(";");
         if (cantrix[robotPosition.posY][robotPosition.posX] == 1 && robotPosition.posY != 0) {
-          // Serial.println("we are at can position!");
+          // We are at can position!
           cantrix[robotPosition.posY][robotPosition.posX] = 0;
           cansCount += 1;
           gripperUp = false;
         }
         if (cantrix[robotPosition.posY][robotPosition.posX] == 1 && robotPosition.posY == 0) {
-          // Serial.println("we are at base position!");
+          // We are at base position!
           cantrix[robotPosition.posY][robotPosition.posX] = 0;
           distanceCost[robotPosition.posY][robotPosition.posX] = 0;
         }
         if (cantrix[robotPosition.posY][robotPosition.posX] == 2) {
-          // Serial.println("virtual can position!");
+          // Virtual can position!
           cantrix[robotPosition.posY][robotPosition.posX] = 0;
         }
 
-        // Serial.println("making measurements");
         int Sharp1 = readSharp1();
         int Sharp2 = readSharp2();
         int Sharp3 = readSharp3();
@@ -771,7 +746,6 @@ void MakeMeasurements(void *pvParameters) {
 }
 
 void calculatePath() {
-  // Serial.println("calculating path");
   int y_lowest, x_lowest, lowestCost = 9999;
   bool canOnBoard = false;
   bool virtualCanOnBoard = false;
@@ -853,26 +827,10 @@ void calculatePath() {
     }
   }
 
-  // Serial.print("cc");
-  // Serial.print(cansCount);
-  // Serial.print(";");
-  // Serial.print(canOnBoard);
-  // Serial.print(";");
-  // Serial.println(virtualCanOnBoard);
-
   // Go to base
   int previousGoingTobaseIteration = goingToBase;
   goingToBase = false;
-  // Serial.print("Logs ");
-  // Serial.print(previousGoingTobaseIteration);
-  // Serial.print(";");
-  // Serial.print(goingToBase);
-  // Serial.print(";");
-  // Serial.print(cantrix[0][1]);
-  // Serial.print(";");
-  // Serial.print(cantrix[0][3]);
-  // Serial.print(";");
-  // Serial.println(cansCount);
+
   if (cansCount >= 1 || (canOnBoard == false && cansCount == 1)) {
     if (previousGoingTobaseIteration == true && opponentAhead == true && cantrix[0][1] == 0 && cantrix[0][3] == 0) {
       // Enemy emptied our base can
@@ -886,7 +844,7 @@ void calculatePath() {
         cantrix[0][3] = 1;
       }
     } else if (previousGoingTobaseIteration == true && (cantrix[0][1] == 1 || cantrix[0][3] == 1)) {
-      // rewrite the values
+      // Rewrite the values
       if (cantrix[0][1] == 1) {
         x_lowest = 1;
       } else if (cantrix[0][3] == 1) {
@@ -946,7 +904,6 @@ void calculatePath() {
 
 // Function for decision making
 void makeDecision(int x, int y) {
-  // Serial.println("making decision");
   // Calculate dist in x and y
   int y_dist = y - robotPosition.posY;
   int x_dist = x - robotPosition.posX;
