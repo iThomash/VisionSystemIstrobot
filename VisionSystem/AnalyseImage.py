@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import time
 
 kernel = np.ones((5,5), np.uint8)
-for z in range(1,19,1):
+for z in range(1,22,1):
     t1 = time.time()
     img = cv2.imread(f"./VisionSystem/zdjecia/zdjecie{z}.jpg", cv2.IMREAD_GRAYSCALE)
     h = round(0.9 * img.shape[0])
@@ -16,25 +16,25 @@ for z in range(1,19,1):
     s2 = [0] * img_morph.shape[0] # Array of zeros
     # print(img_morph.shape)
     for i in range(img_morph.shape[0]):
-        c = img_morph[i] < 50
+        c = img_morph[i] < 11
         s2[i] = np.sum(c)
         for j in range(img_morph.shape[1]):
-            if img_morph[i][j] < 50:
+            if img_morph[i][j] < 11:
                 s1[j]+=1
     sum1=0
     sum2=0
     for i in range(len(s1)):
-        if (s1[i]>=100):
+        if (s1[i]>=101):
             sum1+=1
     for i in range(len(s2)):
-        if (s2[i]>=100):
+        if (s2[i]>=101):
             sum2+=1
     t2 = time.time()
 
     if sum1/len(s1)>=0.6 and sum2/len(s2) >=0.6:
     # ser.write(bytearray("{\"result\": \"enemy\"}"))
         print("{\"result\": \"enemy\"}")
-    elif sum1/len(s1)>=0.18 and sum2/len(s2) >=0.18:
+    elif sum1/len(s1)>=0.15 and sum2/len(s2) >=0.15:
         # ser.write(bytearray("{\"result\": \"can\"}"))
         print("{\"result\": \"can\"}")
     else:
@@ -44,10 +44,10 @@ for z in range(1,19,1):
 
 
 
-    # print(f"Zdjecie: {z}: {round(sum1/len(s1), 2)}\t Czas: {t2-t1}")
-    # print(f"Zdjecie: {z}: {round(sum2/len(s2), 2)}\t Czas: {t2-t1}")
-    # if z==5:
-    #     cv2.imshow("test5", img_morph)
+    print(f"Zdjecie: {z}: {round(sum1/len(s1), 2)}\t Czas: {t2-t1}")
+    print(f"Zdjecie: {z}: {round(sum2/len(s2), 2)}\t Czas: {t2-t1}")
+    if z==21:
+        cv2.imshow("test21", img_morph)
 
 # img_dilated = cv2.dilate(img, np.ones((7,7), np.uint8))
 # img_blurred = cv2.medianBlur(img_dilated, 21)
