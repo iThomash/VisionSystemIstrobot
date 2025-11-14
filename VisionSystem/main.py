@@ -39,12 +39,14 @@ while 1:
         if x==b'':
                 continue
         query = json.loads(x)
-        if query["action"] == 1:
+        print(query)
+        if "action" in query and query["action"] == 1:
                 t1 = time.time()
                 img = picam2.capture_array()
                 # img_blurred = cv2.medianBlur(img, (5,5))
-                
-                img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                h = round(0.9 * img.shape[0])
+                img_arr_cut = img[0 : h, 0 : img.shape[1]]
+                img_gray = cv2.cvtColor(img_arr_cut, cv2.COLOR_BGR2GRAY)
                 ret, img_thres = cv2.threshold(img_gray, 160, 255, cv2.THRESH_BINARY)
                 img_morph = cv2.morphologyEx(img_thres, cv2.MORPH_CLOSE, kernel)
                 s1 = [0] * img_morph.shape[1]
@@ -65,6 +67,18 @@ while 1:
                         if (s2[i]>=100):
                                 sum2+=1
                 t2 = time.time()
-
-                print(f"Zdjecie: {round(sum1/len(s1), 2)}\t Czas: {t2-t1}")
-                print(f"Zdjecie: {round(sum2/len(s2), 2)}\t Czas: {t2-t1}")
+                if sum1/len(s1)>=0.6 and sum2/len(s2) >=0.6:
+                        s = f"{{\"result\": \"enemy\", \"x_fill\": {round(sum1/len(s1), 2)}, \"y_fill\": {round(sum2/len(s2), 2)}}}"
+                        ser.write(bytes(s, encoding='utf-8'))
+                        print("{\"result\": \"enemy\"}")
+                elif sum1/len(s1)>=0.18 and sum2/len(s2) >=0.18:
+                        s = f"{{\"result\": \"can\", \"x_fill\": {round(sum1/len(s1), 2)}, \"y_fill\": {round(sum2/len(s2), 2)}}}"
+                        print(s)
+                        ser.write(bytes(s, encoding='utf-8'))
+                        print("{\"result\": \"can\"}")
+                else:
+                        s = f"{{\"result\": \"None\", \"x_fill\": {round(sum1/len(s1), 2)}, \"y_fill\": {round(sum2/len(s2), 2)}}}"
+                        ser.write(bytes(s, encoding='utf-8'))
+                        print("{\"result\": \"None\"}")
+                # print(f"Zdjecie: {round(sum1/len(s1), 2)}\t Czas: {t2-t1}")
+                # print(f"Zdjecie: {round(sum2/len(s2), 2)}\t Czas: {t2-t1}")

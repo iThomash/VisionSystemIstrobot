@@ -1,5 +1,6 @@
 #include <Arduino_FreeRTOS.h>
 #include <queue.h>  // queue something
+#include <ArduinoJson.h>
 
 //Servos
 #define SERWO_A 12
@@ -91,11 +92,16 @@ bool gripperMoving = false;
 bool waitForGoingBack = false;
 bool gripperUp = true;
 
+// USART communication
+String incomingJson;
+JsonDocument parsedJson;
+
 // Motor action settings
 enum RobotAction { Straighten = 0,
                    RotateLeft = -90,
                    RotateRight = 90,
-                   Retreat = -1 };
+                   Retreat = -1 ,
+                   Stop = -2};
 volatile RobotAction CurrentAction = Straighten;
 // Structure to store robot position and orientation
 struct coordinates {
@@ -230,7 +236,6 @@ void moveStraight(int dist) {
       }
       stepsDone = 0;
       int one = 1;
-      Serial.print("{\"action\": 1}");
       xQueueSend(makeMeasurementsQueue, &one, portMAX_DELAY);
     } else if (!readSensor(rightLineSensorPins[2]) && !readSensor(leftLineSensorPins[2]) && tempTime >= 1200) {
       keepLineOn = false;
@@ -567,7 +572,10 @@ void OpponentDetection(void *pvParameters) {
 // Function to adjust motor speed based on line tracking sensors
 void FlagStep(void *pvParameters) {
   for (;;) {
-    if (waitForGoingBack == true) {
+    if (CurrentAction == Stop) {
+      moveStraight(1);
+
+    } else if (waitForGoingBack == true) {
       waitForGoingBack = false;
       delay(300);
     } else if (CurrentAction == Retreat) {
@@ -594,6 +602,9 @@ void MakeMeasurements(void *pvParameters) {
   int valueFromQueue = 0;
   for (;;) {
     if (xQueueReceive(makeMeasurementsQueue, &valueFromQueue, portMAX_DELAY) == pdPASS) {
+      
+      Serial.print("{\"action\": 1}");
+      CurrentAction = Stop;
       if (valueFromQueue == 1 || valueFromQueue == 2) {
         // Serial.print("Robot position at making measurements ");
         // Serial.print(robotPosition.posX);
@@ -617,12 +628,7 @@ void MakeMeasurements(void *pvParameters) {
           // Serial.println("virtual can position!");
           cantrix[robotPosition.posY][robotPosition.posX] = 0;
         }
-        // Explaination for 100 ms delay
-        // In the moment this function is called the values returned by sensors are the beggining detection values
-        // Basically we just started detecting the object
-        // This 100 ms delay is unfortunatelly on last left and right sensor, so we can't delay it based on mechanical structure
-        // The 100 ms delay allows to measure the object after some time so basically we moved a little bit to the front
-        // vTaskDelay(50/portTICK_PERIOD_MS);  NVMM
+
         // Serial.println("making measurements");
         int Sharp1 = readSharp1();
         int Sharp2 = readSharp2();
@@ -721,7 +727,7 @@ void MakeMeasurements(void *pvParameters) {
             }
           }
         }
-
+        String v = USARTRead();
         if (
           !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY <= 1 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0) && Ultra2 <= 1) {
           if (cansCount == 0 && valueFromQueue != 2) {
@@ -1177,40 +1183,6 @@ void gripper(int direction) {
   gripperMoving = false;
 }
 
-//Function measuring things ahead
-// void MeasureFrontSharpCycle(void *pvParameters) {
-//   for (;;) {
-//     int ultraMeasure = readUltra2();
-//     if (CurrentAction==Straighten && cansCount==0 && stepsDone >= 60 && stepsDone <=120 && puttingBackCans == false &&
-//       !(robotPosition.posX == 0 && robotPosition.rot == -90) &&
-//       !(robotPosition.posX == 4 && robotPosition.rot == 90) &&
-//       !(robotPosition.posY == 0 && robotPosition.rot == 180) &&
-//       !(robotPosition.posY == 4 && robotPosition.rot == 0)
-//     ) {
-//       int sharpMeasure = readSharp2();
-//       int shValueTemp = 0;
-//       if (sharpMeasure>=2) {shValueTemp = 1;}
-//       if (ultraMeasure>=2) {shValueTemp = 0;}
-//       if (cantrix[robotPosition.posY+1][robotPosition.posX] == 1 && robotPosition.rot == 0){
-//         cantrix[robotPosition.posY+1][robotPosition.posX] = shValueTemp;
-//         distanceCost[robotPosition.posY+1][robotPosition.posX] = shValueTemp;
-//       } else if (cantrix[robotPosition.posY-1][robotPosition.posX] == 1 && robotPosition.rot == 180){
-//         cantrix[robotPosition.posY-1][robotPosition.posX] = shValueTemp;
-//         distanceCost[robotPosition.posY+1][robotPosition.posX] = shValueTemp;
-//       } else if (robotPosition.rot == 90){
-//         cantrix[robotPosition.posY][robotPosition.posX+1] = shValueTemp;
-//         distanceCost[robotPosition.posY+1][robotPosition.posX] = shValueTemp;
-//       } else if (robotPosition.rot == -90){
-//         cantrix[robotPosition.posY][robotPosition.posX-1] = shValueTemp;
-//         distanceCost[robotPosition.posY+1][robotPosition.posX] = shValueTemp;
-//       }
-//     }
-//     vTaskDelay(100/portTICK_PERIOD_MS);
-//   }
-// }
-
-
-
 void setup() {
   Serial.begin(9600);
 
@@ -1232,53 +1204,72 @@ void setup() {
   xTaskCreate(  // Function to make measurements
     MakeMeasurements, "MakeMeasurements", 512, NULL, 1, NULL);
 
-  // xTaskCreate(  // Function to adjust motor speed based on line tracking sensors
-  //   DisplayToSerial, "DisplayToSerial", 512, NULL, 1, NULL);
+  xTaskCreate(  // Function to adjust motor speed based on line tracking sensors
+    DisplayToSerial, "DisplayToSerial", 512, NULL, 1, NULL);
 
   xTaskCreate(  // Function to adjust motor speed based on line tracking sensors
     OpponentDetection, "OpponentDetection", 512, NULL, 1, NULL);
 
-  // xTaskCreate( // Function to adjust motor speed based on line tracking sensors
-  // MeasureFrontSharpCycle, "MeasureFrontSharpCycle", 256, NULL, 1, NULL);
+  // xTaskCreate( //Function used for reading serial port
+  //   USARTRead, "ReadUsart", 256, NULL, 1, NULL);
+
 }
 
 void DisplayToSerial(void *pvParameters) {
   for (;;) {
-    Serial.print(CurrentAction);
-    Serial.print(";");
-    // Serial.print(keepLineOn);
+    // Serial.print(CurrentAction);
     // Serial.print(";");
-    Serial.print(robotPosition.posX);
-    Serial.print(";");
-    Serial.print(robotPosition.posY);
-    Serial.print(";");
-    Serial.print(robotPosition.rot);
-    Serial.print(";");
-    Serial.print(n);
-    Serial.print(";");
-    Serial.print(n_coeff);
-    Serial.print(";");
-    Serial.print(readSharp1());
-    Serial.print(";");
-    // Serial.print(readSharp2());
+    // // Serial.print(keepLineOn);
+    // // Serial.print(";");
+    // Serial.print(robotPosition.posX);
     // Serial.print(";");
-    Serial.print(readSharp3());
-    Serial.print(";");
-    // Serial.print(readUltra1());
+    // Serial.print(robotPosition.posY);
     // Serial.print(";");
-    // Serial.print(readUltra2());
+    // Serial.print(robotPosition.rot);
     // Serial.print(";");
-    // Serial.print(readUltra3());
+    // Serial.print(n);
+    // Serial.print(";");
+    // Serial.print(n_coeff);
+    // Serial.print(";");
+    // Serial.print(readSharp1());
+    // Serial.print(";");
+    // // Serial.print(readSharp2());
+    // // Serial.print(";");
+    // Serial.print(readSharp3());
+    // Serial.print(";");
+    // // Serial.print(readUltra1());
+    // // Serial.print(";");
+    // // Serial.print(readUltra2());
+    // // Serial.print(";");
+    // // Serial.print(readUltra3());
 
-    Serial.println(";");
-    // for (int x=4;x>=0;x--){
-    //   for (int y=0;y<5;y++){
-    //   Serial.print(cantrix[x][y]);
-    //   Serial.print(";");
-    //   }
-    //   Serial.println(";");
+    // Serial.println(";");
+    // // for (int x=4;x>=0;x--){
+    // //   for (int y=0;y<5;y++){
+    // //   Serial.print(cantrix[x][y]);
+    // //   Serial.print(";");
+    // //   }
+    // //   Serial.println(";");
+    // // }
+    // if (Serial.available() > 0) {
+    //   // read the incoming byte:
+    //   incomingJson = Serial.read();
+    //   Serial.println(incomingJson, DEC);
     // }
     vTaskDelay(1000 / portTICK_PERIOD_MS);
+  }
+}
+
+String USARTRead() {
+
+  while (true) {
+    if (Serial.available() > 0) {
+      incomingJson = Serial.readStringUntil('}');
+      deserializeJson(parsedJson, incomingJson);
+      String s = parsedJson["result"].as<const char*>();
+      return s;
+    }
+    vTaskDelay(5 / portTICK_PERIOD_MS);
   }
 }
 

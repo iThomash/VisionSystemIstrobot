@@ -4,15 +4,16 @@ import matplotlib.pyplot as plt
 import time
 
 kernel = np.ones((5,5), np.uint8)
-
 for z in range(1,19,1):
     t1 = time.time()
-    img = cv2.imread(f"./zdjecia/zdjecie{z}.jpg", cv2.IMREAD_GRAYSCALE)
+    img = cv2.imread(f"./VisionSystem/zdjecia/zdjecie{z}.jpg", cv2.IMREAD_GRAYSCALE)
+    h = round(0.9 * img.shape[0])
+    img_arr_cut = img[0 : h, 0 : img.shape[1]]
     # img_blurred = cv2.medianBlur(img, (5,5))
-    ret, img_thres = cv2.threshold(img, 160, 255, cv2.THRESH_BINARY)
+    ret, img_thres = cv2.threshold(img_arr_cut, 160, 255, cv2.THRESH_BINARY)
     img_morph = cv2.morphologyEx(img_thres, cv2.MORPH_CLOSE, kernel)
-    s1 = [0] * img_morph.shape[1]
-    s2 = [0] * img_morph.shape[0]
+    s1 = [0] * img_morph.shape[1] # Array of zeros
+    s2 = [0] * img_morph.shape[0] # Array of zeros
     # print(img_morph.shape)
     for i in range(img_morph.shape[0]):
         c = img_morph[i] < 50
@@ -30,10 +31,23 @@ for z in range(1,19,1):
             sum2+=1
     t2 = time.time()
 
-    print(f"Zdjecie: {z}: {round(sum1/len(s1), 2)}\t Czas: {t2-t1}")
-    print(f"Zdjecie: {z}: {round(sum2/len(s2), 2)}\t Czas: {t2-t1}")
-    if z==1:
-        cv2.imshow("test12", img_morph)
+    if sum1/len(s1)>=0.6 and sum2/len(s2) >=0.6:
+    # ser.write(bytearray("{\"result\": \"enemy\"}"))
+        print("{\"result\": \"enemy\"}")
+    elif sum1/len(s1)>=0.18 and sum2/len(s2) >=0.18:
+        # ser.write(bytearray("{\"result\": \"can\"}"))
+        print("{\"result\": \"can\"}")
+    else:
+        # ser.write(bytearray("{\"result\": \"None\"}"))
+        print("{\"result\": \"None\"}")
+
+
+
+
+    # print(f"Zdjecie: {z}: {round(sum1/len(s1), 2)}\t Czas: {t2-t1}")
+    # print(f"Zdjecie: {z}: {round(sum2/len(s2), 2)}\t Czas: {t2-t1}")
+    # if z==5:
+    #     cv2.imshow("test5", img_morph)
 
 # img_dilated = cv2.dilate(img, np.ones((7,7), np.uint8))
 # img_blurred = cv2.medianBlur(img_dilated, 21)
