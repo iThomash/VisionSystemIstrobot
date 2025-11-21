@@ -96,6 +96,9 @@ bool gripperUp = true;
 String incomingJson;
 JsonDocument parsedJson;
 
+float s_avg = 0;
+float u_avg = 0;
+
 // Motor action settings
 enum RobotAction { Straighten = 0,
                    RotateLeft = -90,
@@ -236,7 +239,7 @@ void moveStraight(int dist) {
       stepsDone = 0;
       int one = 1;
       xQueueSend(makeMeasurementsQueue, &one, portMAX_DELAY);
-    } else if (!readSensor(rightLineSensorPins[2]) && !readSensor(leftLineSensorPins[2]) && tempTime >= 1200) {
+    } else if (!readSensor(rightLineSensorPins[2]) && !readSensor(leftLineSensorPins[2]) && tempTime >= 1500) {
       keepLineOn = false;
     }
   }
@@ -290,7 +293,7 @@ void moveBack(int dist) {
       // CurrentAction = Straighten;
       int one = 1;
       xQueueSend(makeMeasurementsQueue, &one, portMAX_DELAY);
-    } else if (!readSensor(rightLineSensorPins[2]) && !readSensor(leftLineSensorPins[2]) && tempTime >= 1200 && puttingBackCans == true) {
+    } else if (!readSensor(rightLineSensorPins[2]) && !readSensor(leftLineSensorPins[2]) && tempTime >= 1500 && puttingBackCans == true) {
       keepLineOn = false;
     } else if (!readSensor(rightLineSensorPins[0]) && !readSensor(leftLineSensorPins[0]) && tempTime >= 150 && puttingBackCans == false) {
       keepLineOn = false;
@@ -586,7 +589,8 @@ void MakeMeasurements(void *pvParameters) {
   for (;;) {
     if (xQueueReceive(makeMeasurementsQueue, &valueFromQueue, portMAX_DELAY) == pdPASS) {
       
-      Serial.print("{\"action\": 1}");
+      Serial.println("{\"action\": 1}");
+
       CurrentAction = Stop;
       if (valueFromQueue == 1 || valueFromQueue == 2) {
         if (cantrix[robotPosition.posY][robotPosition.posX] == 1 && robotPosition.posY != 0) {
@@ -622,20 +626,6 @@ void MakeMeasurements(void *pvParameters) {
         int Ultra1 = readUltra1();
         int Ultra2 = readUltra2();
         int Ultra3 = readUltra3();
-        //if ultra detects, it's enemy!
-        // Serial.print("ultras; ");
-        // Serial.print(Sharp1);
-        // Serial.print(";");
-        // Serial.print(Sharp2);
-        // Serial.print(";");
-        // Serial.print(Sharp3);
-        // Serial.print(";");
-        // Serial.print(Ultra1);
-        // Serial.print(";");
-        // Serial.print(Ultra2);
-        // Serial.print(";");
-        // Serial.print(Ultra3);
-        // Serial.println(";");
 
         if (
           !(robotPosition.posX == 0 && robotPosition.rot == 0) && !(robotPosition.posX == 4 && robotPosition.rot == 180) && !(robotPosition.posY <= 1 && robotPosition.rot == -90) && !(robotPosition.posY == 4 && robotPosition.rot == 90) && Ultra1 <= 1) {
@@ -702,12 +692,62 @@ void MakeMeasurements(void *pvParameters) {
             }
           }
         }
+        // No camera integration
+        // if (
+        //   !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY <= 1 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0) && Ultra2 <= 1) {
+        //   if (cansCount == 0 && valueFromQueue != 2) {
+        //     int shValueTemp = 0;
+        //     if (Sharp2 >= 2) { shValueTemp = 1; }
+        //     if (robotPosition.rot == 0) {
+        //       cantrix[robotPosition.posY + 1][robotPosition.posX] = shValueTemp;
+        //     } else if (robotPosition.rot == 180) {
+        //       cantrix[robotPosition.posY - 1][robotPosition.posX] = shValueTemp;
+        //     } else if (robotPosition.rot == 90) {
+        //       cantrix[robotPosition.posY][robotPosition.posX + 1] = shValueTemp;
+        //     } else if (robotPosition.rot == -90) {
+        //       cantrix[robotPosition.posY][robotPosition.posX - 1] = shValueTemp;
+        //     }
+        //   }
+        // } else if (Ultra2 >= 2 && !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY <= 1 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
+        //   change_n = true;
+        //   opponentAhead = true;
+        //   if (robotPosition.rot == 0) {
+        //     for (int i = robotPosition.posX; i < 5; i++) {
+        //       if (cantrix[i][robotPosition.posX] != 2) { cantrix[i][robotPosition.posX] = 0; }
+        //     }
+        //   } else if (robotPosition.rot == 180) {
+        //     for (int i = 0; i < robotPosition.posX; i++) {
+        //       if (cantrix[i][robotPosition.posX] != 2) { cantrix[i][robotPosition.posX] = 0; }
+        //     }
+        //   } else if (robotPosition.rot == 90) {
+        //     for (int i = robotPosition.posY; i < 5; i++) {
+        //       if (cantrix[robotPosition.posY][i] != 2) { cantrix[robotPosition.posY][i] = 0; }
+        //     }
+        //   } else if (robotPosition.rot == -90) {
+        //     for (int i = 0; i < robotPosition.posY; i++) {
+        //       if (cantrix[robotPosition.posY][i] != 2) { cantrix[robotPosition.posY][i] = 0; }
+        //     }
+        //   }
+        // }
         String v = USARTRead();
-        if (
-          !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY <= 1 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0) && Ultra2 <= 1) {
-          if (cansCount == 0 && valueFromQueue != 2) {
+        // Camera is a confirmation of a measurement
+        float can_th = 2, enemy_th = 2; // Default threshold for can detection
+        if (v == "can") {
+          can_th -= 0.5;
+        } else if (v == "enemy") {
+          enemy_th -= 0.5;
+        }
+        // printJSON(can_th, String(cansCount));
+        // printJSON(s_avg, "");
+        // printJSON(u_avg, "");
+        if ( u_avg <= enemy_th &&
+          !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY <= 1 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
+          if (valueFromQueue == 2 && v == "can") {s_avg = 3;}
+          if (cansCount == 0) {
             int shValueTemp = 0;
-            if (Sharp2 >= 2) { shValueTemp = 1; }
+            if (s_avg >= can_th) { 
+              shValueTemp = 1;
+            }
             if (robotPosition.rot == 0) {
               cantrix[robotPosition.posY + 1][robotPosition.posX] = shValueTemp;
             } else if (robotPosition.rot == 180) {
@@ -717,8 +757,10 @@ void MakeMeasurements(void *pvParameters) {
             } else if (robotPosition.rot == -90) {
               cantrix[robotPosition.posY][robotPosition.posX - 1] = shValueTemp;
             }
+
           }
-        } else if (Ultra2 >= 2 && !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY <= 1 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
+        } 
+        if (u_avg >= enemy_th && !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY <= 1 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
           change_n = true;
           opponentAhead = true;
           if (robotPosition.rot == 0) {
@@ -739,6 +781,9 @@ void MakeMeasurements(void *pvParameters) {
             }
           }
         }
+
+
+
         calculatePath();
       }
     }
@@ -905,6 +950,7 @@ void calculatePath() {
 // Function for decision making
 void makeDecision(int x, int y) {
   // Calculate dist in x and y
+  CurrentAction = Straighten;
   int y_dist = y - robotPosition.posY;
   int x_dist = x - robotPosition.posX;
   if (readUltra2() >= 2 && robotPosition.posX == 1 && robotPosition.posY == 0 && robotPosition.rot == 0) {
@@ -1164,8 +1210,8 @@ void setup() {
   xTaskCreate(  // Function to adjust motor speed based on line tracking sensors
     DisplayToSerial, "DisplayToSerial", 512, NULL, 1, NULL);
 
-  xTaskCreate(  // Function to adjust motor speed based on line tracking sensors
-    OpponentDetection, "OpponentDetection", 512, NULL, 1, NULL);
+  // xTaskCreate(  // Function to adjust motor speed based on line tracking sensors
+  //   OpponentDetection, "OpponentDetection", 512, NULL, 1, NULL);
 
   // xTaskCreate( //Function used for reading serial port
   //   USARTRead, "ReadUsart", 256, NULL, 1, NULL);
@@ -1174,7 +1220,7 @@ void setup() {
 
 void DisplayToSerial(void *pvParameters) {
   for (;;) {
-    // Serial.print(CurrentAction);
+    // printJSON(CurrentAction, "");
     // Serial.print(";");
     // // Serial.print(keepLineOn);
     // // Serial.print(";");
@@ -1217,17 +1263,40 @@ void DisplayToSerial(void *pvParameters) {
   }
 }
 
+bool ignoreNext = false;
 String USARTRead() {
-
+  int i = 0;
+  int t =  millis();
+  int s_sum = 0, u_sum = 0;
   while (true) {
+    if (millis() - t > i*100 ) {
+      i++;
+      s_sum+= readSharp2();
+      u_sum+= readUltra2(); // we can eventually stop measuring and abandon camera measurment when ultra has some values
+      if (i>=2 && u_sum / i >= 2.5) {
+        ignoreNext = true;
+        printJSON(0,"skrocenie");
+        return "enemy";
+      }
+    }
     if (Serial.available() > 0) {
       incomingJson = Serial.readStringUntil('}');
       deserializeJson(parsedJson, incomingJson);
       String s = parsedJson["result"].as<const char*>();
+      s_avg = (float) s_sum/(i+1);
+      u_avg = (float) u_sum/(i+1);
+      printJSON(ignoreNext, s);
+      if (ignoreNext == true) {ignoreNext = false; continue;}
+ 
       return s;
     }
     vTaskDelay(5 / portTICK_PERIOD_MS);
   }
+}
+
+void printJSON(float s, String a) {
+  String w = "{\"value\": \"" + String(s) + "\", \"message\": \"" + a +"\"}";
+  Serial.println(w);
 }
 
 void loop() {}

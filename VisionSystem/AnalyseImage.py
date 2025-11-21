@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import time
 
 kernel = np.ones((5,5), np.uint8)
-for z in range(1,22,1):
+for z in range(23,24,1):
     t1 = time.time()
     img = cv2.imread(f"./VisionSystem/zdjecia/zdjecie{z}.jpg", cv2.IMREAD_GRAYSCALE)
     h = round(0.9 * img.shape[0])
