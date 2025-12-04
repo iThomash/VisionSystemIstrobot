@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import time
 
 kernel = np.ones((5,5), np.uint8)
-for z in range(23,24,1):
+for z in range(16,17,1):
     t1 = time.time()
     img = cv2.imread(f"./VisionSystem/zdjecia/zdjecie{z}.jpg", cv2.IMREAD_GRAYSCALE)
     h = round(0.9 * img.shape[0])
@@ -46,7 +46,7 @@ for z in range(23,24,1):
 
     print(f"Zdjecie: {z}: {round(sum1/len(s1), 2)}\t Czas: {t2-t1}")
     print(f"Zdjecie: {z}: {round(sum2/len(s2), 2)}\t Czas: {t2-t1}")
-    if z==21:
+    if z==16:
         cv2.imshow("test21", img_morph)
 
 # img_dilated = cv2.dilate(img, np.ones((7,7), np.uint8))

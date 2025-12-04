@@ -590,7 +590,6 @@ void MakeMeasurements(void *pvParameters) {
     if (xQueueReceive(makeMeasurementsQueue, &valueFromQueue, portMAX_DELAY) == pdPASS) {
       
       Serial.println("{\"action\": 1}");
-
       CurrentAction = Stop;
       if (valueFromQueue == 1 || valueFromQueue == 2) {
         if (cantrix[robotPosition.posY][robotPosition.posX] == 1 && robotPosition.posY != 0) {
@@ -1009,7 +1008,7 @@ void makeDecision(int x, int y) {
             CurrentAction = Straighten;
             remainingCrossings = 0;  //Rotation by 180
           } else if (robotPosition.rot == 90) {
-            CurrentAction = CurrentAction = RotateRight;
+            CurrentAction = RotateRight;
           }
         }
       }
