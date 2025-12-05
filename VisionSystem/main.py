@@ -13,7 +13,8 @@ os.environ["LIBCAMERA_LOG_LEVEL"] = "ERROR"
 picam2 = Picamera2()
 picam2.start_preview(Preview.NULL)
 picam2.start()
-
+z = 0
+time_sum = 0
 ser = serial.Serial(
         # Serial Port to read the data from
         port='/dev/ttyAMA0',
@@ -38,9 +39,14 @@ while 1:
         x=ser.readline()
         if x==b'':
                 continue
-        query = json.loads(x)
+        try:
+                query = json.loads(x)
+        except Exception as e:
+                print("MAIN LOOP ERROR:", e)
+                continue
         print(query)
         if "action" in query and query["action"] == 1:
+                z += 1
                 t1 = time.time()
                 # img_blurred = cv2.medianBlur(img, (5,5))
                 output_file = "zdjecie.jpg"
@@ -82,5 +88,7 @@ while 1:
                         s = f"{{\"result\": \"None\", \"x_fill\": {round(sum1/len(s1), 2)}, \"y_fill\": {round(sum2/len(s2), 2)}}}"
                         ser.write(bytes(s, encoding='utf-8'))
                         print("{\"result\": \"None\"}")
-                # print(f"Zdjecie: {round(sum1/len(s1), 2)}\t Czas: {t2-t1}")
+                time_sum += (t2-t1) 
+
+                print(f"Czas sumaryczny: {time_sum} \tIlosc: {z}")
                 # print(f"Zdjecie: {round(sum2/len(s2), 2)}\t Czas: {t2-t1}")
