@@ -40,26 +40,25 @@ int readUltra3() {
 
 // the loop routine runs over and over again forever:
 void loop() {
-    Serial.print("Sharp 1 = ");
+    Serial.print("{\"Sharp_1\": ");
     Serial.print(readSharp1());  
     Serial.print(", ");
-    Serial.print("Sharp 2 = ");
+    Serial.print("\"Sharp_2\": ");
     Serial.print(readSharp2());  
     Serial.print(", ");
-    Serial.print("Sharp 3 = ");
+    Serial.print("\"Sharp_3\": ");
     Serial.print(readSharp3()); 
     Serial.print(", ");
-    Serial.print("Ultra 1 = ");
+    Serial.print("\"Ultra_1\": ");
     Serial.print(readUltra1());
-    delay(50);
     Serial.print(", ");
-    Serial.print("Ultra 2 = ");
+    Serial.print("\"Ultra_2\": ");
     Serial.print(readUltra2());
-    delay(50);
     Serial.print(", ");
-    Serial.print("Ultra 3 = ");
+    Serial.print("\"Ultra_3\": ");
     Serial.print(readUltra3());  
-    Serial.print("\n");
+    Serial.print("}\n");
+    delay(200);
 }
 // for (int i = 0; i <= 15; i++) {
 

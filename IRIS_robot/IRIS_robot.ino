@@ -635,10 +635,10 @@ void MakeMeasurements(void *pvParameters) {
       if (puttingBackCans) continue;
       makeMeasurementsCallCount += 1;
       tempStartForCalculations = millis();
-      if (!(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY == 0 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
-        tempTimeForCameraTime = millis();
-        Serial.println("{\"action\": 1}");
-      }
+      // if (!(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY == 0 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
+      //   tempTimeForCameraTime = millis();
+      //   Serial.println("{\"action\": 1}");
+      // }
       CurrentAction = Stop;
       if (valueFromQueue == 1 || valueFromQueue == 2) {
         if (cantrix[robotPosition.posY][robotPosition.posX] == 1 && robotPosition.posY != 0) {
@@ -653,7 +653,8 @@ void MakeMeasurements(void *pvParameters) {
           distanceCost[robotPosition.posY][robotPosition.posX] = 0;
         }
         if (cantrix[robotPosition.posY][robotPosition.posX] == 2) {
-          // Virtual can position!
+          // We are at virtual can position!
+          // Serial.print("{\"messgae\": \"can pos\"}");
           cantrix[robotPosition.posY][robotPosition.posX] = 0;
         }
 
@@ -679,13 +680,26 @@ void MakeMeasurements(void *pvParameters) {
           !(robotPosition.posX == 0 && robotPosition.rot == 0) && !(robotPosition.posX == 4 && robotPosition.rot == 180) && !(robotPosition.posY <= 1 && robotPosition.rot == -90) && !(robotPosition.posY == 4 && robotPosition.rot == 90) && Ultra1 <= 1) {
           int shValueTemp = 0;
           if (Sharp1 >= 2) { shValueTemp = 1; }
+          
           if (robotPosition.rot == 0) {
+            if (cantrix[robotPosition.posY][robotPosition.posX - 1] == 2 && shValueTemp == 0) {
+              shValueTemp = 2;
+            }
             cantrix[robotPosition.posY][robotPosition.posX - 1] = shValueTemp;
           } else if (robotPosition.rot == 180) {
+            if (cantrix[robotPosition.posY][robotPosition.posX + 1] == 2 && shValueTemp == 0) {
+              shValueTemp = 2;
+            }
             cantrix[robotPosition.posY][robotPosition.posX + 1] = shValueTemp;
           } else if (robotPosition.rot == 90) {
+            if (cantrix[robotPosition.posY + 1][robotPosition.posX] == 2 && shValueTemp == 0) {
+              shValueTemp = 2;
+            }
             cantrix[robotPosition.posY + 1][robotPosition.posX] = shValueTemp;
           } else if (robotPosition.rot == -90) {
+            if (cantrix[robotPosition.posY - 1][robotPosition.posX] == 2 && shValueTemp == 0) {
+              shValueTemp = 2;
+            }
             cantrix[robotPosition.posY - 1][robotPosition.posX] = shValueTemp;
           }
         } else if (Ultra1 >= 2) {
@@ -714,11 +728,23 @@ void MakeMeasurements(void *pvParameters) {
           if (Sharp3 >= 2) { shValueTemp = 1; }
           if (robotPosition.rot == 0) {
             cantrix[robotPosition.posY][robotPosition.posX + 1] = shValueTemp;
+            if (cantrix[robotPosition.posY][robotPosition.posX + 1] == 2 && shValueTemp == 0) {
+              shValueTemp = 2;
+            }
           } else if (robotPosition.rot == 180) {
+            if (cantrix[robotPosition.posY][robotPosition.posX - 1] == 2 && shValueTemp == 0) {
+              shValueTemp = 2;
+            }
             cantrix[robotPosition.posY][robotPosition.posX - 1] = shValueTemp;
           } else if (robotPosition.rot == 90) {
+            if (cantrix[robotPosition.posY-1][robotPosition.posX] == 2 && shValueTemp == 0) {
+              shValueTemp = 2;
+            }
             cantrix[robotPosition.posY - 1][robotPosition.posX] = shValueTemp;
           } else if (robotPosition.rot == -90) {
+            if (cantrix[robotPosition.posY+1][robotPosition.posX] == 2 && shValueTemp == 0) {
+              shValueTemp = 2;
+            }
             cantrix[robotPosition.posY + 1][robotPosition.posX] = shValueTemp;
           }
         } else if (Ultra3 >= 2) {
@@ -741,88 +767,34 @@ void MakeMeasurements(void *pvParameters) {
           }
         }
         // No camera integration
-        // if (
-        //   !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY <= 1 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0) && Ultra2 <= 1) {
-        //   if (cansCount == 0 && valueFromQueue != 2) {
-        //     int shValueTemp = 0;
-        //     if (Sharp2 >= 2) { shValueTemp = 1; }
-        //     if (robotPosition.rot == 0) {
-        //       cantrix[robotPosition.posY + 1][robotPosition.posX] = shValueTemp;
-        //     } else if (robotPosition.rot == 180) {
-        //       cantrix[robotPosition.posY - 1][robotPosition.posX] = shValueTemp;
-        //     } else if (robotPosition.rot == 90) {
-        //       cantrix[robotPosition.posY][robotPosition.posX + 1] = shValueTemp;
-        //     } else if (robotPosition.rot == -90) {
-        //       cantrix[robotPosition.posY][robotPosition.posX - 1] = shValueTemp;
-        //     }
-        //   }
-        // } else if (Ultra2 >= 2 && !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY <= 1 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
-        //   change_n = true;
-        //   opponentAhead = true;
-        //   if (robotPosition.rot == 0) {
-        //     for (int i = robotPosition.posX; i < 5; i++) {
-        //       if (cantrix[i][robotPosition.posX] != 2) { cantrix[i][robotPosition.posX] = 0; }
-        //     }
-        //   } else if (robotPosition.rot == 180) {
-        //     for (int i = 0; i < robotPosition.posX; i++) {
-        //       if (cantrix[i][robotPosition.posX] != 2) { cantrix[i][robotPosition.posX] = 0; }
-        //     }
-        //   } else if (robotPosition.rot == 90) {
-        //     for (int i = robotPosition.posY; i < 5; i++) {
-        //       if (cantrix[robotPosition.posY][i] != 2) { cantrix[robotPosition.posY][i] = 0; }
-        //     }
-        //   } else if (robotPosition.rot == -90) {
-        //     for (int i = 0; i < robotPosition.posY; i++) {
-        //       if (cantrix[robotPosition.posY][i] != 2) { cantrix[robotPosition.posY][i] = 0; }
-        //     }
-        //   }
-        // }
-        String v = "None";
-        if (!(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY == 0 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
-          v = USARTRead();
-        }
-        // printJSON(1111, String(s_avg));
-        // Camera is a confirmation of a measurement
-        allThresholdCheckCount += 1;
-        float can_th = 2, enemy_th = 2;  // Default threshold for can detection
-        if (v == "can") {
-          can_th -= 0.5;
-          canThresholdChangeCount += 1;
-        } else if (v == "enemy") {
-          enemy_th -= 0.5;
-          enemyThresholdChangeCount += 1;
-        }
-        // printJSON(s_avg, String(can_th));
-        if (can_th == 1.5 && s_avg <= 2 && s_avg >= 1.5 && cansCount == 0) {
-          // printJSON(3208, "triggered");
-          howManyTimesAffectedCan += 1;
-        }
-        if (enemy_th == 1.5 && u_avg <= 2 && u_avg >= 1.5) {
-          howManyTimesAffectedEnemy += 1;
-        }
-
-        // printJSON(can_th, String(s_avg));
-        // printJSON(43243, v);
-        // printJSON(u_avg, "");
-        if (u_avg <= enemy_th && !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY == 0 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
-          if (valueFromQueue == 2 && v == "can") { s_avg = 3; }
-          if (cansCount == 0) {
+        if (
+          !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY <= 1 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0) && Ultra2 <= 1) {
+          if (cansCount == 0 && valueFromQueue != 2) {
             int shValueTemp = 0;
-            if (s_avg >= can_th) {
-              shValueTemp = 1;
-            }
+            if (Sharp2 >= 2) { shValueTemp = 1; }
             if (robotPosition.rot == 0) {
+              if (cantrix[robotPosition.posY+1][robotPosition.posX] == 2 && shValueTemp == 0) {
+                shValueTemp = 2;
+              }
               cantrix[robotPosition.posY + 1][robotPosition.posX] = shValueTemp;
             } else if (robotPosition.rot == 180) {
+              if (cantrix[robotPosition.posY - 1][robotPosition.posX] == 2 && shValueTemp == 0) {
+                shValueTemp = 2;
+              }
               cantrix[robotPosition.posY - 1][robotPosition.posX] = shValueTemp;
             } else if (robotPosition.rot == 90) {
+              if (cantrix[robotPosition.posY][robotPosition.posX + 1] == 2 && shValueTemp == 0) {
+                shValueTemp = 2;
+              }
               cantrix[robotPosition.posY][robotPosition.posX + 1] = shValueTemp;
             } else if (robotPosition.rot == -90) {
+              if (cantrix[robotPosition.posY][robotPosition.posX - 1] == 2 && shValueTemp == 0) {
+                shValueTemp = 2;
+              }
               cantrix[robotPosition.posY][robotPosition.posX - 1] = shValueTemp;
             }
           }
-        }
-        if (u_avg >= enemy_th && !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY <= 1 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
+        } else if (Ultra2 >= 2 && !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY == 0 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
           change_n = true;
           opponentAhead = true;
           if (robotPosition.rot == 0) {
@@ -843,6 +815,84 @@ void MakeMeasurements(void *pvParameters) {
             }
           }
         }
+        // String v = "None";
+        // if (!(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY == 0 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
+        //   v = USARTRead();
+        // }
+        // // printJSON(1111, String(s_avg));
+        // // Camera is a confirmation of a measurement
+        // allThresholdCheckCount += 1;
+        // float can_th = 2, enemy_th = 2;  // Default threshold for can detection
+        // if (v == "can") {
+        //   can_th -= 0.5;
+        //   canThresholdChangeCount += 1;
+        // } else if (v == "enemy") {
+        //   enemy_th -= 0.5;
+        //   enemyThresholdChangeCount += 1;
+        // }
+        // // printJSON(s_avg, String(can_th));
+        // if (can_th == 1.5 && s_avg <= 2 && s_avg >= 1.5 && cansCount == 0) {
+        //   // printJSON(3208, "triggered");
+        //   howManyTimesAffectedCan += 1;
+        // }
+        // if (enemy_th == 1.5 && u_avg <= 2 && u_avg >= 1.5) {
+        //   howManyTimesAffectedEnemy += 1;
+        // }
+
+        // printJSON(u_avg, String(enemy_th));
+        // // printJSON(43243, v);
+        // // printJSON(u_avg, "");
+        // if (u_avg <= enemy_th && !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY == 0 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
+        //   if (valueFromQueue == 2 && v == "can") { s_avg = 3; }
+        //   if (cansCount == 0) {
+        //     int shValueTemp = 0;
+        //     if (s_avg >= can_th) {
+        //       shValueTemp = 1;
+        //     }
+        //     if (robotPosition.rot == 0) {
+        //       if (cantrix[robotPosition.posY+1][robotPosition.posX] == 2 && shValueTemp == 0) {
+        //         shValueTemp = 2;
+        //       }
+        //       cantrix[robotPosition.posY + 1][robotPosition.posX] = shValueTemp;
+        //     } else if (robotPosition.rot == 180) {
+        //       if (cantrix[robotPosition.posY - 1][robotPosition.posX] == 2 && shValueTemp == 0) {
+        //         shValueTemp = 2;
+        //       }
+        //       cantrix[robotPosition.posY - 1][robotPosition.posX] = shValueTemp;
+        //     } else if (robotPosition.rot == 90) {
+        //       if (cantrix[robotPosition.posY][robotPosition.posX + 1] == 2 && shValueTemp == 0) {
+        //         shValueTemp = 2;
+        //       }
+        //       cantrix[robotPosition.posY][robotPosition.posX + 1] = shValueTemp;
+        //     } else if (robotPosition.rot == -90) {
+        //       if (cantrix[robotPosition.posY][robotPosition.posX - 1] == 2 && shValueTemp == 0) {
+        //         shValueTemp = 2;
+        //       }
+        //       cantrix[robotPosition.posY][robotPosition.posX - 1] = shValueTemp;
+        //     }
+        //   }
+        // }
+        // if (u_avg >= enemy_th && !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY <= 1 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
+        //   change_n = true;
+        //   opponentAhead = true;
+        //   if (robotPosition.rot == 0) {
+        //     for (int i = robotPosition.posX; i < 5; i++) {
+        //       if (cantrix[i][robotPosition.posX] != 2) { cantrix[i][robotPosition.posX] = 0; }
+        //     }
+        //   } else if (robotPosition.rot == 180) {
+        //     for (int i = 0; i < robotPosition.posX; i++) {
+        //       if (cantrix[i][robotPosition.posX] != 2) { cantrix[i][robotPosition.posX] = 0; }
+        //     }
+        //   } else if (robotPosition.rot == 90) {
+        //     for (int i = robotPosition.posY; i < 5; i++) {
+        //       if (cantrix[robotPosition.posY][i] != 2) { cantrix[robotPosition.posY][i] = 0; }
+        //     }
+        //   } else if (robotPosition.rot == -90) {
+        //     for (int i = 0; i < robotPosition.posY; i++) {
+        //       if (cantrix[robotPosition.posY][i] != 2) { cantrix[robotPosition.posY][i] = 0; }
+        //     }
+        //   }
+        // }
 
         calculatePath();
       }
@@ -851,6 +901,7 @@ void MakeMeasurements(void *pvParameters) {
 }
 
 void calculatePath() {
+
   int y_lowest, x_lowest, lowestCost = 9999;
   bool canOnBoard = false;
   bool virtualCanOnBoard = false;
@@ -935,9 +986,13 @@ void calculatePath() {
   // Go to base
   int previousGoingTobaseIteration = goingToBase;
   goingToBase = false;
+  
+  // Serial.print("{\"previousGoingTobaseIteration\": ");
+  // Serial.print(previousGoingTobaseIteration);
+  // Serial.print("}\n");
 
   if (cansCount >= 1 || (canOnBoard == false && cansCount == 1)) {
-    if (previousGoingTobaseIteration == true && opponentAhead == true && cantrix[0][1] == 0 && cantrix[0][3] == 0) {
+    if ( opponentAhead == true && cantrix[0][1] == 0 && cantrix[0][3] == 0) {
       // Enemy emptied our base can
       if (robotPosition.posX >= 2) {
         x_lowest = 1;
@@ -971,18 +1026,58 @@ void calculatePath() {
     goingToBase = true;
     lowestCost = -1;
   }
-
+  if (canOnBoard == true) {
+    virtualCanOnBoard = false;
+    if (cantrix[rectanglePoints[0][1]][rectanglePoints[0][0]] == 2) {
+      cantrix[rectanglePoints[0][1]][rectanglePoints[0][0]] = 0;
+      distanceCost[rectanglePoints[0][1]][rectanglePoints[0][0]] = 0;
+    }
+    if (cantrix[rectanglePoints[1][1]][rectanglePoints[1][0]] == 2) {
+      cantrix[rectanglePoints[1][1]][rectanglePoints[1][0]] = 0;
+      distanceCost[rectanglePoints[1][1]][rectanglePoints[1][0]] = 0;
+    }
+    if (cantrix[rectanglePoints[2][1]][rectanglePoints[2][0]] == 2) {
+      cantrix[rectanglePoints[2][1]][rectanglePoints[2][0]] = 0;
+      distanceCost[rectanglePoints[2][1]][rectanglePoints[2][0]] = 0;
+    }
+    if (cantrix[rectanglePoints[3][1]][rectanglePoints[3][0]] == 2) {
+      cantrix[rectanglePoints[3][1]][rectanglePoints[3][0]] = 0;
+      distanceCost[rectanglePoints[3][1]][rectanglePoints[3][0]] = 0;
+    }
+  }
   // Creating search path with virtual cans
   if (canOnBoard == false && virtualCanOnBoard == false && cansCount == 0) {
     change_n = true;
   }
-
+  Serial.print("{\"change_n\": ");
+  Serial.print(change_n);
+  Serial.print(",\"goingToBase\": ");
+  Serial.print(goingToBase);
+  Serial.print(",\"canOnBoard\": ");
+  Serial.print(canOnBoard);
+  Serial.print(",\"virtualCanOnBoard\": ");
+  Serial.print(virtualCanOnBoard);
+  Serial.print(",\"cansCount\": ");
+  Serial.print(cansCount);
+  Serial.print(",\"canOnBoard\": ");
+  Serial.print(canOnBoard);
+  // Serial.print(",\"cantrix[2][1]\": ");
+  // Serial.print(cantrix[2][1]);
+  // Serial.print(",\"cantrix[2][2]\": ");
+  // Serial.print(cantrix[2][2]);
+  Serial.println("}");
   if (change_n == true && goingToBase == false && canOnBoard == false) {
     cantrix[rectanglePoints[n][1]][rectanglePoints[n][0]] = 0;
     distanceCost[rectanglePoints[n][1]][rectanglePoints[n][0]] = 0;
     n = n + (1 * n_coeff);
     if (rectanglePoints[n][1] == robotPosition.posY && rectanglePoints[n][0] == robotPosition.posX) {
       n = n + (1 * n_coeff);
+    }
+
+    if (robotPosition.posX == 1 && robotPosition.posY == 1) {
+      n = 3;
+    }  else if (robotPosition.posX == 3 && robotPosition.posY == 1) {
+      n = 0;
     }
     if (n > 3) { n = 0; }
     if (n < 0) { n = 3; }
@@ -997,11 +1092,23 @@ void calculatePath() {
     x_lowest = rectanglePoints[n][0];
     y_lowest = rectanglePoints[n][1];
   }
-
-  // Serial.print("Target: X=");
-  // Serial.print(x_lowest);
-  // Serial.print(" Y=");
-  // Serial.print(y_lowest);
+  Serial.print("{\"posX\": ");
+  Serial.print(robotPosition.posX);
+  Serial.print(",\"posY\": ");
+  Serial.print(robotPosition.posY);
+  Serial.print(",\"targetX\": ");
+  Serial.print(x_lowest);
+  Serial.print(",\"targetY\": ");
+  Serial.print(y_lowest);
+  Serial.print(",\"cantrix[y_lowest][x_lowest]\": ");
+  Serial.print(cantrix[y_lowest][x_lowest]);
+  Serial.print(",\"n\": ");
+  Serial.print(n);
+  Serial.print(",\"change_n\": ");
+  Serial.print(change_n);
+  Serial.print(",\"n_coeff\": ");
+  Serial.print(n_coeff);
+  Serial.print("}");
   // Serial.print(" Lowest cost: ");
   // Serial.println(lowestCost);
   
@@ -1338,14 +1445,14 @@ String USARTRead() {
       i++;
       s_sum += readSharp2();
       u_sum += readUltra2();  // we can eventually stop measuring and abandon camera measurment when ultra has some values
-      if (i>=2 && ((float) u_sum / i) >= 2.5) {
-        howManyTimesShortenedMeasurement += 1;
-        ignoreNext = true;
-        s_avg = (float) s_sum / (i + 1);
-        u_avg = (float) u_sum / (i + 1);
-        printJSON(0,"skrocenie enemy");
-        return "enemy";
-      }
+      // if (i>=2 && ((float) u_sum / i) >= 2.5) {
+      //   howManyTimesShortenedMeasurement += 1;
+      //   ignoreNext = true;
+      //   s_avg = (float) s_sum / (i + 1);
+      //   u_avg = (float) u_sum / (i + 1);
+      //   printJSON(0,"skrocenie enemy");
+      //   return "enemy";
+      // }
 
       if (i >= 2 && ((float)s_sum / i) >= 2.5 && ((float)u_sum / i) == 0) {
         howManyTimesShortenedMeasurement += 1;
