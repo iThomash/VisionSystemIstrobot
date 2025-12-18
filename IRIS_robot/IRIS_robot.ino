@@ -61,7 +61,6 @@ bool readSensor(int sensPin) {
 
 // Function prototypes for FreeRTOS tasks
 void FlagStep(void *pvParameters);
-void DisplayToSerial(void *pvParameters);
 void MakeMeasurements(void *pvParameters);
 
 // Other functions used by a robot
@@ -124,7 +123,6 @@ int n_coeff = 1;
 bool change_n = false;
 bool opponentAhead = false;
 int rectanglePoints[4][2] = { { 1, 4 }, { 1, 1 }, { 3, 1 }, { 3, 4 } };
-// int rectanglePoints[4][2] = {{1,2},{1,1},{3,1},{3,2}};
 int cantrix[5][5] = { { 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0 } };
 int distanceCost[5][5] = { { 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0 } };
 
@@ -148,9 +146,6 @@ unsigned long tempTimeForCameraTime = 0;
 bool sent = false;
 
 unsigned long startTime = millis();
-
-// Misc
-#define BUZZER 8
 
 // Functions to read distance sensor values
 int readSharp1() {
@@ -307,7 +302,6 @@ void moveBack(int dist) {
       previousCrossingTimestamp = millis();
       keepLineOn = true;
       stepsDone = 0;
-      // CurrentAction = Straighten;
       int one = 1;
       xQueueSend(makeMeasurementsQueue, &one, portMAX_DELAY);
     } else if (!readSensor(rightLineSensorPins[2]) && !readSensor(leftLineSensorPins[2]) && tempTime >= 1200 && puttingBackCans == true) {
@@ -420,7 +414,6 @@ void rotateBy(int angle, bool sensored = true) {
           }
       }
     }
-    // bothMotorStep(10);
   }
   if (angle == 90 && robotPosition.rot != 180) {
     robotPosition.rot = robotPosition.rot + angle;
@@ -453,7 +446,6 @@ void rotateBy(int angle, bool sensored = true) {
 //Logic for placing cans in base
 int returnCansStepCount = 15;
 void returnCans() {
-  // Serial.println("Executing cans return");
   if (robotPosition.posX == 1 && robotPosition.rot == 180) {
     rotateBy(90);
 
@@ -513,66 +505,7 @@ void returnCans() {
   opponentAhead = false;
 }
 
-void retreatCansReset() {
-  if (robotPosition.rot == 0) {
-    for (int i = robotPosition.posX; i < 5; i++) {
-      if (cantrix[i][robotPosition.posX] != 2) { cantrix[i][robotPosition.posX] = 0; }
-    }
-  } else if (robotPosition.rot == 180) {
-    for (int i = 0; i < robotPosition.posX; i++) {
-      if (cantrix[i][robotPosition.posX] != 2) { cantrix[i][robotPosition.posX] = 0; }
-    }
-  } else if (robotPosition.rot == 90) {
-    for (int i = robotPosition.posY; i < 5; i++) {
-      if (cantrix[robotPosition.posY][i] != 2) { cantrix[robotPosition.posY][i] = 0; }
-    }
-  } else if (robotPosition.rot == -90) {
-    for (int i = 0; i < robotPosition.posY; i++) {
-      if (cantrix[robotPosition.posY][i] != 2) { cantrix[robotPosition.posY][i] = 0; }
-    }
-  }
-}
-
-void OpponentDetection(void *pvParameters) {
-  for (;;) {
-    int frontSensorReading = readUltra2();
-    int frontSharpSensorReading = readSharp2();
-    //frontSharpSensorReading >=2
-    if (frontSensorReading >= 2 && CurrentAction == Straighten && gripperMoving != true
-        && puttingBackCans == false && opponentAhead == false && !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY == 0 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
-      retreatCansReset();
-      opponentAhead = true;
-      if (stepsDone >= 50 && stepsDone <= 180) {
-        waitForGoingBack = true;
-        CurrentAction = Retreat;
-        // if (cansCount>=1) {gripper(1);}
-        bool canAtBoard = false;
-        for (int i = 0; i < 5; i++) {
-          for (int j = 0; j < 5; j++) {
-            if (cantrix[i][j] == 1) {
-              canAtBoard = true;
-              break;
-            }
-          }
-          if (canAtBoard == true) { break; }
-        }
-
-        // There is no can on board, change the n counting direction
-        if (canAtBoard == false) {
-          n_coeff = -n_coeff;
-          change_n = true;
-        }
-        keepLineOn = false;
-      } else {  // just go to the end
-        CurrentAction = Straighten;
-      }
-    }
-    vTaskDelay(200 / portTICK_PERIOD_MS);
-  }
-}
-
-
-// Function to adjust motor speed based on line tracking sensors
+// Function to adjust motor speed based on decisions
 void FlagStep(void *pvParameters) {
   for (;;) {
     if (CurrentAction == Stop) {
@@ -635,10 +568,10 @@ void MakeMeasurements(void *pvParameters) {
       if (puttingBackCans) continue;
       makeMeasurementsCallCount += 1;
       tempStartForCalculations = millis();
-      // if (!(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY == 0 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
-      //   tempTimeForCameraTime = millis();
-      //   Serial.println("{\"action\": 1}");
-      // }
+      if (!(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY == 0 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
+        tempTimeForCameraTime = millis();
+        Serial.println("{\"action\": 1}");
+      }
       CurrentAction = Stop;
       if (valueFromQueue == 1 || valueFromQueue == 2) {
         if (cantrix[robotPosition.posY][robotPosition.posX] == 1 && robotPosition.posY != 0) {
@@ -654,7 +587,6 @@ void MakeMeasurements(void *pvParameters) {
         }
         if (cantrix[robotPosition.posY][robotPosition.posX] == 2) {
           // We are at virtual can position!
-          // Serial.print("{\"messgae\": \"can pos\"}");
           cantrix[robotPosition.posY][robotPosition.posX] = 0;
         }
 
@@ -767,88 +699,11 @@ void MakeMeasurements(void *pvParameters) {
           }
         }
         // No camera integration
-        if (
-          !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY <= 1 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0) && Ultra2 <= 1) {
-          if (cansCount == 0 && valueFromQueue != 2) {
-            int shValueTemp = 0;
-            if (Sharp2 >= 2) { shValueTemp = 1; }
-            if (robotPosition.rot == 0) {
-              if (cantrix[robotPosition.posY+1][robotPosition.posX] == 2 && shValueTemp == 0) {
-                shValueTemp = 2;
-              }
-              cantrix[robotPosition.posY + 1][robotPosition.posX] = shValueTemp;
-            } else if (robotPosition.rot == 180) {
-              if (cantrix[robotPosition.posY - 1][robotPosition.posX] == 2 && shValueTemp == 0) {
-                shValueTemp = 2;
-              }
-              cantrix[robotPosition.posY - 1][robotPosition.posX] = shValueTemp;
-            } else if (robotPosition.rot == 90) {
-              if (cantrix[robotPosition.posY][robotPosition.posX + 1] == 2 && shValueTemp == 0) {
-                shValueTemp = 2;
-              }
-              cantrix[robotPosition.posY][robotPosition.posX + 1] = shValueTemp;
-            } else if (robotPosition.rot == -90) {
-              if (cantrix[robotPosition.posY][robotPosition.posX - 1] == 2 && shValueTemp == 0) {
-                shValueTemp = 2;
-              }
-              cantrix[robotPosition.posY][robotPosition.posX - 1] = shValueTemp;
-            }
-          }
-        } else if (Ultra2 >= 2 && !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY == 0 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
-          change_n = true;
-          opponentAhead = true;
-          if (robotPosition.rot == 0) {
-            for (int i = robotPosition.posX; i < 5; i++) {
-              if (cantrix[i][robotPosition.posX] != 2) { cantrix[i][robotPosition.posX] = 0; }
-            }
-          } else if (robotPosition.rot == 180) {
-            for (int i = 0; i < robotPosition.posX; i++) {
-              if (cantrix[i][robotPosition.posX] != 2) { cantrix[i][robotPosition.posX] = 0; }
-            }
-          } else if (robotPosition.rot == 90) {
-            for (int i = robotPosition.posY; i < 5; i++) {
-              if (cantrix[robotPosition.posY][i] != 2) { cantrix[robotPosition.posY][i] = 0; }
-            }
-          } else if (robotPosition.rot == -90) {
-            for (int i = 0; i < robotPosition.posY; i++) {
-              if (cantrix[robotPosition.posY][i] != 2) { cantrix[robotPosition.posY][i] = 0; }
-            }
-          }
-        }
-        // String v = "None";
-        // if (!(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY == 0 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
-        //   v = USARTRead();
-        // }
-        // // printJSON(1111, String(s_avg));
-        // // Camera is a confirmation of a measurement
-        // allThresholdCheckCount += 1;
-        // float can_th = 2, enemy_th = 2;  // Default threshold for can detection
-        // if (v == "can") {
-        //   can_th -= 0.5;
-        //   canThresholdChangeCount += 1;
-        // } else if (v == "enemy") {
-        //   enemy_th -= 0.5;
-        //   enemyThresholdChangeCount += 1;
-        // }
-        // // printJSON(s_avg, String(can_th));
-        // if (can_th == 1.5 && s_avg <= 2 && s_avg >= 1.5 && cansCount == 0) {
-        //   // printJSON(3208, "triggered");
-        //   howManyTimesAffectedCan += 1;
-        // }
-        // if (enemy_th == 1.5 && u_avg <= 2 && u_avg >= 1.5) {
-        //   howManyTimesAffectedEnemy += 1;
-        // }
-
-        // printJSON(u_avg, String(enemy_th));
-        // // printJSON(43243, v);
-        // // printJSON(u_avg, "");
-        // if (u_avg <= enemy_th && !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY == 0 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
-        //   if (valueFromQueue == 2 && v == "can") { s_avg = 3; }
-        //   if (cansCount == 0) {
+        // if (
+        //   !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY <= 1 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0) && Ultra2 <= 1) {
+        //   if (cansCount == 0 && valueFromQueue != 2) {
         //     int shValueTemp = 0;
-        //     if (s_avg >= can_th) {
-        //       shValueTemp = 1;
-        //     }
+        //     if (Sharp2 >= 2) { shValueTemp = 1; }
         //     if (robotPosition.rot == 0) {
         //       if (cantrix[robotPosition.posY+1][robotPosition.posX] == 2 && shValueTemp == 0) {
         //         shValueTemp = 2;
@@ -871,8 +726,7 @@ void MakeMeasurements(void *pvParameters) {
         //       cantrix[robotPosition.posY][robotPosition.posX - 1] = shValueTemp;
         //     }
         //   }
-        // }
-        // if (u_avg >= enemy_th && !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY <= 1 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
+        // } else if (Ultra2 >= 2 && !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY == 0 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
         //   change_n = true;
         //   opponentAhead = true;
         //   if (robotPosition.rot == 0) {
@@ -893,6 +747,82 @@ void MakeMeasurements(void *pvParameters) {
         //     }
         //   }
         // }
+
+        // Camera integration 
+        String v = "None";
+        if (!(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY == 0 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
+          v = USARTRead();
+        }
+
+        // Camera is a confirmation of a measurement
+        allThresholdCheckCount += 1;
+        float can_th = 2, enemy_th = 2;  // Default threshold for can detection
+        if (v == "can") {
+          can_th -= 0.5;
+          canThresholdChangeCount += 1;
+        } else if (v == "enemy") {
+          enemy_th -= 0.5;
+          enemyThresholdChangeCount += 1;
+        }
+        
+        if (can_th == 1.5 && s_avg <= 2 && s_avg >= 1.5 && cansCount == 0) {
+          howManyTimesAffectedCan += 1;
+        }
+        if (enemy_th == 1.5 && u_avg <= 2 && u_avg >= 1.5) {
+          howManyTimesAffectedEnemy += 1;
+        }
+
+        if (u_avg <= enemy_th && !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY == 0 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
+          if (valueFromQueue == 2 && v == "can") { s_avg = 3; }
+          if (cansCount == 0) {
+            int shValueTemp = 0;
+            if (s_avg >= can_th) {
+              shValueTemp = 1;
+            }
+            if (robotPosition.rot == 0) {
+              if (cantrix[robotPosition.posY+1][robotPosition.posX] == 2 && shValueTemp == 0) {
+                shValueTemp = 2;
+              }
+              cantrix[robotPosition.posY + 1][robotPosition.posX] = shValueTemp;
+            } else if (robotPosition.rot == 180) {
+              if (cantrix[robotPosition.posY - 1][robotPosition.posX] == 2 && shValueTemp == 0) {
+                shValueTemp = 2;
+              }
+              cantrix[robotPosition.posY - 1][robotPosition.posX] = shValueTemp;
+            } else if (robotPosition.rot == 90) {
+              if (cantrix[robotPosition.posY][robotPosition.posX + 1] == 2 && shValueTemp == 0) {
+                shValueTemp = 2;
+              }
+              cantrix[robotPosition.posY][robotPosition.posX + 1] = shValueTemp;
+            } else if (robotPosition.rot == -90) {
+              if (cantrix[robotPosition.posY][robotPosition.posX - 1] == 2 && shValueTemp == 0) {
+                shValueTemp = 2;
+              }
+              cantrix[robotPosition.posY][robotPosition.posX - 1] = shValueTemp;
+            }
+          }
+        }
+        if (u_avg >= enemy_th && !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY <= 1 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
+          change_n = true;
+          opponentAhead = true;
+          if (robotPosition.rot == 0) {
+            for (int i = robotPosition.posX; i < 5; i++) {
+              if (cantrix[i][robotPosition.posX] != 2) { cantrix[i][robotPosition.posX] = 0; }
+            }
+          } else if (robotPosition.rot == 180) {
+            for (int i = 0; i < robotPosition.posX; i++) {
+              if (cantrix[i][robotPosition.posX] != 2) { cantrix[i][robotPosition.posX] = 0; }
+            }
+          } else if (robotPosition.rot == 90) {
+            for (int i = robotPosition.posY; i < 5; i++) {
+              if (cantrix[robotPosition.posY][i] != 2) { cantrix[robotPosition.posY][i] = 0; }
+            }
+          } else if (robotPosition.rot == -90) {
+            for (int i = 0; i < robotPosition.posY; i++) {
+              if (cantrix[robotPosition.posY][i] != 2) { cantrix[robotPosition.posY][i] = 0; }
+            }
+          }
+        }
 
         calculatePath();
       }
@@ -986,10 +916,6 @@ void calculatePath() {
   // Go to base
   int previousGoingTobaseIteration = goingToBase;
   goingToBase = false;
-  
-  // Serial.print("{\"previousGoingTobaseIteration\": ");
-  // Serial.print(previousGoingTobaseIteration);
-  // Serial.print("}\n");
 
   if (cansCount >= 1 || (canOnBoard == false && cansCount == 1)) {
     if ( opponentAhead == true && cantrix[0][1] == 0 && cantrix[0][3] == 0) {
@@ -1049,23 +975,7 @@ void calculatePath() {
   if (canOnBoard == false && virtualCanOnBoard == false && cansCount == 0) {
     change_n = true;
   }
-  Serial.print("{\"change_n\": ");
-  Serial.print(change_n);
-  Serial.print(",\"goingToBase\": ");
-  Serial.print(goingToBase);
-  Serial.print(",\"canOnBoard\": ");
-  Serial.print(canOnBoard);
-  Serial.print(",\"virtualCanOnBoard\": ");
-  Serial.print(virtualCanOnBoard);
-  Serial.print(",\"cansCount\": ");
-  Serial.print(cansCount);
-  Serial.print(",\"canOnBoard\": ");
-  Serial.print(canOnBoard);
-  // Serial.print(",\"cantrix[2][1]\": ");
-  // Serial.print(cantrix[2][1]);
-  // Serial.print(",\"cantrix[2][2]\": ");
-  // Serial.print(cantrix[2][2]);
-  Serial.println("}");
+
   if (change_n == true && goingToBase == false && canOnBoard == false) {
     cantrix[rectanglePoints[n][1]][rectanglePoints[n][0]] = 0;
     distanceCost[rectanglePoints[n][1]][rectanglePoints[n][0]] = 0;
@@ -1092,31 +1002,8 @@ void calculatePath() {
     x_lowest = rectanglePoints[n][0];
     y_lowest = rectanglePoints[n][1];
   }
-  Serial.print("{\"posX\": ");
-  Serial.print(robotPosition.posX);
-  Serial.print(",\"posY\": ");
-  Serial.print(robotPosition.posY);
-  Serial.print(",\"targetX\": ");
-  Serial.print(x_lowest);
-  Serial.print(",\"targetY\": ");
-  Serial.print(y_lowest);
-  Serial.print(",\"cantrix[y_lowest][x_lowest]\": ");
-  Serial.print(cantrix[y_lowest][x_lowest]);
-  Serial.print(",\"n\": ");
-  Serial.print(n);
-  Serial.print(",\"change_n\": ");
-  Serial.print(change_n);
-  Serial.print(",\"n_coeff\": ");
-  Serial.print(n_coeff);
-  Serial.print("}");
-  // Serial.print(" Lowest cost: ");
-  // Serial.println(lowestCost);
-  
-  // Serial.print("{\"message\": ");
-  // Serial.print(cantrix[1][1]);
-  // Serial.print("}\n");
+
   makeDecision(x_lowest, y_lowest);
-  
 }
 
 // Function for decision making
@@ -1373,66 +1260,12 @@ void setup() {
 
   makeMeasurementsQueue = xQueueCreate(1, sizeof(int));
 
-
   xTaskCreate(  // Function to adjust motor speed based on line tracking sensors
     FlagStep, "FlagStep", 1024, NULL, 1, NULL);
 
   xTaskCreate(  // Function to make measurements
     MakeMeasurements, "MakeMeasurements", 512, NULL, 1, NULL);
 
-  xTaskCreate(  // Function to adjust motor speed based on line tracking sensors
-    DisplayToSerial, "DisplayToSerial", 512, NULL, 1, NULL);
-
-  // xTaskCreate(  // Function to adjust motor speed based on line tracking sensors
-  //   OpponentDetection, "OpponentDetection", 512, NULL, 1, NULL);
-
-  // xTaskCreate( //Function used for reading serial port
-  //   USARTRead, "ReadUsart", 256, NULL, 1, NULL);
-}
-
-void DisplayToSerial(void *pvParameters) {
-  for (;;) {
-    // printJSON(CurrentAction, "");
-    // Serial.print(";");
-    // // Serial.print(keepLineOn);
-    // // Serial.print(";");
-    // Serial.print(robotPosition.posX);
-    // Serial.print(";");
-    // Serial.print(robotPosition.posY);
-    // Serial.print(";");
-    // Serial.print(robotPosition.rot);
-    // Serial.print(";");
-    // Serial.print(n);
-    // Serial.print(";");
-    // Serial.print(n_coeff);
-    // Serial.print(";");
-    // Serial.print(readSharp1());
-    // Serial.print(";");
-    // // Serial.print(readSharp2());
-    // // Serial.print(";");
-    // Serial.print(readSharp3());
-    // Serial.print(";");
-    // // Serial.print(readUltra1());
-    // // Serial.print(";");
-    // // Serial.print(readUltra2());
-    // // Serial.print(";");
-    // // Serial.print(readUltra3());
-
-    // Serial.println(";");
-    // // for (int x=4;x>=0;x--){
-    // //   for (int y=0;y<5;y++){
-    // //   Serial.print(cantrix[x][y]);
-    // //   Serial.print(";");
-    // //   }
-    // //   Serial.println(";");
-    // // }
-    // if (Serial.available() > 0) {
-    //   // read the incoming byte:
-    //   incomingJson = Serial.read();
-    //   Serial.println(incomingJson, DEC);
-    // }
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-  }
 }
 
 bool ignoreNext = false;
@@ -1445,24 +1278,25 @@ String USARTRead() {
       i++;
       s_sum += readSharp2();
       u_sum += readUltra2();  // we can eventually stop measuring and abandon camera measurment when ultra has some values
+
+      // Version with enemy shortening 
       // if (i>=2 && ((float) u_sum / i) >= 2.5) {
       //   howManyTimesShortenedMeasurement += 1;
       //   ignoreNext = true;
       //   s_avg = (float) s_sum / (i + 1);
       //   u_avg = (float) u_sum / (i + 1);
-      //   printJSON(0,"skrocenie enemy");
       //   return "enemy";
       // }
 
+      // Version with can shortening
       if (i >= 2 && ((float)s_sum / i) >= 2.5 && ((float)u_sum / i) == 0) {
         howManyTimesShortenedMeasurement += 1;
         ignoreNext = true;
         s_avg = (float) s_sum / (i + 1);
         u_avg = (float) u_sum / (i + 1);
-        printJSON(0,"skrocenie can");
         return "can";
       }
-      // printJSON(((float) u_sum / i), String((float) s_sum / i));
+
     }
     if (Serial.available() > 0) {
       incomingJson = Serial.readStringUntil('}');
@@ -1470,7 +1304,6 @@ String USARTRead() {
       String s = parsedJson["result"].as<const char *>();
       s_avg = (float)s_sum / (i + 1);
       u_avg = (float)u_sum / (i + 1);
-      printJSON(ignoreNext, s);
       if (ignoreNext == true) {
         ignoreNext = false;
         continue;
@@ -1483,9 +1316,4 @@ String USARTRead() {
   }
 }
 
-void printJSON(float s, String a) {
-  String w = "{\"value\": \"" + String(s) + "\", \"message\": \"" + a + "\"}";
-  Serial.println(w);
-}
-
-void loop() {}
+void loop() {} // Main code :)
