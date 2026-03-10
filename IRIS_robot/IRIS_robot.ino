@@ -457,7 +457,7 @@ void returnCans() {
     delay(200);
     digitalWrite(R_DIR, HIGH);
     digitalWrite(L_DIR, HIGH);
-    for (int i = 0; i < returnCansStepCount; i++) {
+    for (int i = 0; i < returnCansStepCount-3; i++) {
       moveBack(10);
     }
 
@@ -474,7 +474,7 @@ void returnCans() {
     delay(200);
     digitalWrite(R_DIR, HIGH);
     digitalWrite(L_DIR, HIGH);
-    for (int i = 0; i < returnCansStepCount; i++) {
+    for (int i = 0; i < returnCansStepCount-3; i++) {
       moveBack(10);
     }
 
@@ -489,7 +489,7 @@ void returnCans() {
     delay(200);
     digitalWrite(R_DIR, HIGH);
     digitalWrite(L_DIR, HIGH);
-    for (int i = 0; i < returnCansStepCount; i++) {
+    for (int i = 0; i < returnCansStepCount-3; i++) {
       moveBack(10);
     }
 
@@ -573,6 +573,8 @@ void MakeMeasurements(void *pvParameters) {
         Serial.println("{\"action\": 1}");
       }
       CurrentAction = Stop;
+      
+      vTaskDelay(300 / portTICK_PERIOD_MS);
       if (valueFromQueue == 1 || valueFromQueue == 2) {
         if (cantrix[robotPosition.posY][robotPosition.posX] == 1 && robotPosition.posY != 0) {
           // We are at can position!
@@ -753,7 +755,10 @@ void MakeMeasurements(void *pvParameters) {
         if (!(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY == 0 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
           v = USARTRead();
         }
-
+        
+        Serial.print("{\"s2\":");
+        Serial.print(Sharp2);
+        Serial.print("}");
         // Camera is a confirmation of a measurement
         allThresholdCheckCount += 1;
         float can_th = 2, enemy_th = 2;  // Default threshold for can detection
@@ -1280,13 +1285,13 @@ String USARTRead() {
       u_sum += readUltra2();  // we can eventually stop measuring and abandon camera measurment when ultra has some values
 
       // Version with enemy shortening 
-      // if (i>=2 && ((float) u_sum / i) >= 2.5) {
-      //   howManyTimesShortenedMeasurement += 1;
-      //   ignoreNext = true;
-      //   s_avg = (float) s_sum / (i + 1);
-      //   u_avg = (float) u_sum / (i + 1);
-      //   return "enemy";
-      // }
+      if (i>=2 && ((float) u_sum / i) >= 2.5) {
+        howManyTimesShortenedMeasurement += 1;
+        ignoreNext = true;
+        s_avg = (float) s_sum / (i + 1);
+        u_avg = (float) u_sum / (i + 1);
+        return "enemy";
+      }
 
       // Version with can shortening
       if (i >= 2 && ((float)s_sum / i) >= 2.5 && ((float)u_sum / i) == 0) {

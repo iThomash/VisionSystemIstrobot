@@ -4,11 +4,11 @@ import matplotlib.pyplot as plt
 import time
 
 kernel = np.ones((5,5), np.uint8)
-for z in range(26,27,1):
+for z in range(27,28,1):
     t1 = time.time()
-    img = cv2.imread(f"./VisionSystem/zdjecia/zdjecie{z}.jpg", cv2.IMREAD_GRAYSCALE)
-    h = round(0.9 * img.shape[0])
-    img_arr_cut = img[0 : h, 0 : img.shape[1]]
+    img = cv2.imread(f"./zdjecia/zdjecie{z}.jpg", cv2.IMREAD_GRAYSCALE)
+    h = round(0.8 * img.shape[0])
+    img_arr_cut = img[round(0.1 * img.shape[0]) : round(0.8 * img.shape[0]), 0 : img.shape[1]]
     # img_blurred = cv2.medianBlur(img, (5,5))
     ret, img_thres = cv2.threshold(img_arr_cut, 160, 255, cv2.THRESH_BINARY)
     img_morph = cv2.morphologyEx(img_thres, cv2.MORPH_CLOSE, kernel)
@@ -24,7 +24,7 @@ for z in range(26,27,1):
     sum1=0
     sum2=0
     for i in range(len(s1)):
-        if (s1[i]>=101):
+        if (s1[i]>101):
             sum1+=1
     for i in range(len(s2)):
         if (s2[i]>=101):
@@ -34,7 +34,7 @@ for z in range(26,27,1):
     if sum1/len(s1)>=0.6 and sum2/len(s2) >=0.6:
     # ser.write(bytearray("{\"result\": \"enemy\"}"))
         print("{\"result\": \"enemy\"}")
-    elif sum1/len(s1)>=0.15 and sum2/len(s2) >=0.15:
+    elif sum1/len(s1)>=0.19 and sum2/len(s2) >=0.19:
         # ser.write(bytearray("{\"result\": \"can\"}"))
         print("{\"result\": \"can\"}")
     else:

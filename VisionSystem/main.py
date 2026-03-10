@@ -53,7 +53,7 @@ while 1:
                 picam2.capture_file(output_file)
                 img = picam2.capture_array()
                 h = round(0.9 * img.shape[0])
-                img_arr_cut = img[0 : h, 0 : img.shape[1]]
+                img_arr_cut = img[round(0.1 * img.shape[0]) : round(0.8 * img.shape[0]), 0 : img.shape[1]]
                 img_gray = cv2.cvtColor(img_arr_cut, cv2.COLOR_BGR2GRAY)
                 ret, img_thres = cv2.threshold(img_gray, 160, 255, cv2.THRESH_BINARY)
                 img_morph = cv2.morphologyEx(img_thres, cv2.MORPH_CLOSE, kernel)
@@ -79,7 +79,7 @@ while 1:
                         s = f"{{\"result\": \"enemy\", \"x_fill\": {round(sum1/len(s1), 2)}, \"y_fill\": {round(sum2/len(s2), 2)}}}"
                         ser.write(bytes(s, encoding='utf-8'))
                         print("{\"result\": \"enemy\"}")
-                elif sum1/len(s1)>=0.15 and sum2/len(s2) >=0.15:
+                elif sum1/len(s1)>=0.19 and sum2/len(s2) >=0.19:
                         s = f"{{\"result\": \"can\", \"x_fill\": {round(sum1/len(s1), 2)}, \"y_fill\": {round(sum2/len(s2), 2)}}}"
                         print(s)
                         ser.write(bytes(s, encoding='utf-8'))
