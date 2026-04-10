@@ -251,7 +251,7 @@ void moveStraight(int dist) {
       stepsDone = 0;
       int one = 1;
       xQueueSend(makeMeasurementsQueue, &one, portMAX_DELAY);
-    } else if (!readSensor(rightLineSensorPins[2]) && !readSensor(leftLineSensorPins[2]) && tempTime >= 1200) {
+    } else if (!readSensor(rightLineSensorPins[2]) && !readSensor(leftLineSensorPins[2]) && tempTime >= 1400) {
       keepLineOn = false;
     }
   }
@@ -756,17 +756,21 @@ void MakeMeasurements(void *pvParameters) {
           v = USARTRead();
         }
         
-        Serial.print("{\"s2\":");
-        Serial.print(Sharp2);
-        Serial.print("}");
+        // Serial.print("{\"s1\":");
+        // Serial.print(Sharp1);
+        // Serial.print(", \"s2\":");
+        // Serial.print(Sharp2);
+        // Serial.print(", \"s3\":");
+        // Serial.print(Sharp3);
+        // Serial.print("}");
         // Camera is a confirmation of a measurement
         allThresholdCheckCount += 1;
         float can_th = 2, enemy_th = 2;  // Default threshold for can detection
         if (v == "can") {
-          can_th -= 0.5;
+          can_th -= 3; // 0.5 def, 3 =rely on camera always
           canThresholdChangeCount += 1;
         } else if (v == "enemy") {
-          enemy_th -= 0.5;
+          enemy_th -= 3; // 0.5 def, 3 =rely on camera always
           enemyThresholdChangeCount += 1;
         }
         

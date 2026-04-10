@@ -6,6 +6,7 @@ import os
 import json
 import cv2
 import numpy as np
+from PIL import Image
 
 kernel = np.ones((5,5), np.uint8)
 
@@ -48,14 +49,17 @@ while 1:
         if "action" in query and query["action"] == 1:
                 z += 1
                 t1 = time.time()
-                # img_blurred = cv2.medianBlur(img, (5,5))
-                output_file = "zdjecie.jpg"
-                picam2.capture_file(output_file)
+                # output_file = f"zdjecie.jpg"
+                # picam2.capture_file(output_file)
+                time.sleep(0.37)
                 img = picam2.capture_array()
+                imsave = Image.fromarray(img)
+                rgb_im = imsave.convert('RGB')
+                rgb_im.save(f"./zdjecia/zdjecie{z}.jpg")
                 h = round(0.9 * img.shape[0])
-                img_arr_cut = img[round(0.1 * img.shape[0]) : round(0.8 * img.shape[0]), 0 : img.shape[1]]
-                img_gray = cv2.cvtColor(img_arr_cut, cv2.COLOR_BGR2GRAY)
-                ret, img_thres = cv2.threshold(img_gray, 160, 255, cv2.THRESH_BINARY)
+                img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                img_arr_cut = img_gray[round(0.1 * img.shape[0]) : round(0.8 * img.shape[0]), 0 : img.shape[1]]
+                ret, img_thres = cv2.threshold(img_arr_cut, 139, 255, cv2.THRESH_BINARY)
                 img_morph = cv2.morphologyEx(img_thres, cv2.MORPH_CLOSE, kernel)
                 s1 = [0] * img_morph.shape[1]
                 s2 = [0] * img_morph.shape[0]
@@ -75,7 +79,7 @@ while 1:
                         if (s2[i]>=101):
                                 sum2+=1
                 t2 = time.time()
-                if sum1/len(s1)>=0.6 and sum2/len(s2) >=0.6 or sum2/len(s2) > 0.7:
+                if sum1/len(s1)>=0.6 and sum2/len(s2) >=0.6:
                         s = f"{{\"result\": \"enemy\", \"x_fill\": {round(sum1/len(s1), 2)}, \"y_fill\": {round(sum2/len(s2), 2)}}}"
                         ser.write(bytes(s, encoding='utf-8'))
                         print("{\"result\": \"enemy\"}")
