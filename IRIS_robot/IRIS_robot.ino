@@ -336,7 +336,7 @@ int goingFromEdge(int angle) {
 
 void rotateBy(int angle, bool sensored = true) {
   int sensorValue = goingFromEdge(angle);
-  if (cansCount != 0) { gripper(1); }
+  // if (cansCount != 0) { gripper(1); }
   if (angle > 0) {
     digitalWrite(L_DIR, LOW);
     digitalWrite(R_DIR, HIGH);
@@ -573,7 +573,7 @@ void MakeMeasurements(void *pvParameters) {
         Serial.println("{\"action\": 1}");
       }
       CurrentAction = Stop;
-      
+
       vTaskDelay(300 / portTICK_PERIOD_MS);
       if (valueFromQueue == 1 || valueFromQueue == 2) {
         if (cantrix[robotPosition.posY][robotPosition.posX] == 1 && robotPosition.posY != 0) {
@@ -581,6 +581,7 @@ void MakeMeasurements(void *pvParameters) {
           cantrix[robotPosition.posY][robotPosition.posX] = 0;
           cansCount += 1;
           gripperUp = false;
+          gripper(1);
         }
         if (cantrix[robotPosition.posY][robotPosition.posX] == 1 && robotPosition.posY == 0) {
           // We are at base position!
@@ -767,10 +768,10 @@ void MakeMeasurements(void *pvParameters) {
         allThresholdCheckCount += 1;
         float can_th = 2, enemy_th = 2;  // Default threshold for can detection
         if (v == "can") {
-          can_th -= 3; // 0.5 def, 3 =rely on camera always
+          can_th -= 10; // 0.5 def, 3 =rely on camera always
           canThresholdChangeCount += 1;
         } else if (v == "enemy") {
-          enemy_th -= 3; // 0.5 def, 3 =rely on camera always
+          enemy_th -= 10; // 0.5 def, 3 =rely on camera always
           enemyThresholdChangeCount += 1;
         }
         
@@ -781,7 +782,8 @@ void MakeMeasurements(void *pvParameters) {
           howManyTimesAffectedEnemy += 1;
         }
 
-        if (u_avg <= enemy_th && !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY == 0 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
+        // if (u_avg <= enemy_th  && !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY == 0 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
+        if (v == "can" && !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY == 0 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
           if (valueFromQueue == 2 && v == "can") { s_avg = 3; }
           if (cansCount == 0) {
             int shValueTemp = 0;
@@ -811,7 +813,8 @@ void MakeMeasurements(void *pvParameters) {
             }
           }
         }
-        if (u_avg >= enemy_th && !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY <= 1 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
+        // if (u_avg >= enemy_th && !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY <= 1 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
+        if (v == "enemy" && !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY <= 1 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
           change_n = true;
           opponentAhead = true;
           if (robotPosition.rot == 0) {
@@ -832,14 +835,25 @@ void MakeMeasurements(void *pvParameters) {
             }
           }
         }
+        if (v == "None" && !(robotPosition.posX == 0 && robotPosition.rot == -90) && !(robotPosition.posX == 4 && robotPosition.rot == 90) && !(robotPosition.posY == 0 && robotPosition.rot == 180) && !(robotPosition.posY == 4 && robotPosition.rot == 0)) {
+          if (robotPosition.rot == 0) {
+            if (cantrix[robotPosition.posY+1][robotPosition.posX] != 2) { cantrix[robotPosition.posY+1][robotPosition.posX] = 0; }
+          } else if (robotPosition.rot == 180) {
+            if (cantrix[robotPosition.posY-1][robotPosition.posX] != 2) { cantrix[robotPosition.posY-1][robotPosition.posX] = 0; }
+          } else if (robotPosition.rot == 90) {
+            if (cantrix[robotPosition.posY][robotPosition.posX+1] != 2) { cantrix[robotPosition.posY][robotPosition.posX+1] = 0; }
+          } else if (robotPosition.rot == -90) {
+            if (cantrix[robotPosition.posY][robotPosition.posX-1] != 2) { cantrix[robotPosition.posY][robotPosition.posX-1] = 0; }
+          }
+        }
 
-        calculatePath();
+        calculatePath(v);
       }
     }
   }
 }
 
-void calculatePath() {
+void calculatePath(String v) {
 
   int y_lowest, x_lowest, lowestCost = 9999;
   bool canOnBoard = false;
@@ -940,10 +954,27 @@ void calculatePath() {
       }
     } else if (previousGoingTobaseIteration == true && (cantrix[0][1] == 1 || cantrix[0][3] == 1)) {
       // Rewrite the values
-      if (cantrix[0][1] == 1) {
+      Serial.print("{\"c1\": ");
+      if (opponentAhead == false && cantrix[0][1] == 1) {
+        Serial.println("{\"A\": 1}");
+        cantrix[0][3] = 0;
+        cantrix[0][1] = 1;
         x_lowest = 1;
-      } else if (cantrix[0][3] == 1) {
+      } else if (opponentAhead == false && cantrix[0][3] == 1) {
+        Serial.println("{\"A\": 2}");
+        cantrix[0][1] = 0;
+        cantrix[0][3] = 1;
         x_lowest = 3;
+      } else if (opponentAhead == true && cantrix[0][1] == 1) {
+        Serial.println("{\"A\": 3}");
+        cantrix[0][1] = 0;
+        cantrix[0][3] = 1;
+        x_lowest = 3;
+      } else if (opponentAhead == true && cantrix[0][3] == 1) {
+        Serial.println("{\"A\": 4}");
+        cantrix[0][3] = 0;
+        cantrix[0][1] = 1;
+        x_lowest = 1;
       }
       lowestCost = 1;
     } else {
@@ -1012,23 +1043,30 @@ void calculatePath() {
     y_lowest = rectanglePoints[n][1];
   }
 
-  makeDecision(x_lowest, y_lowest);
+  Serial.print("{\"x_lowest\": ");
+  Serial.print(x_lowest);
+  Serial.print(", \"\y_lowest\": ");
+  Serial.print(y_lowest);
+  Serial.println("}");
+
+
+  makeDecision(x_lowest, y_lowest, v);
 }
 
 // Function for decision making
-void makeDecision(int x, int y) {
+void makeDecision(int x, int y, String v) {
   // Calculate dist in x and y
   CurrentAction = Straighten;
   int y_dist = y - robotPosition.posY;
   int x_dist = x - robotPosition.posX;
-  if (readUltra2() >= 2 && robotPosition.posX == 1 && robotPosition.posY == 0 && robotPosition.rot == 0) {
+  if (v == "enemy" && robotPosition.posX == 1 && robotPosition.posY == 0 && robotPosition.rot == 0) {
     CurrentAction = RotateRight;
     return;
-  } else if (readUltra2() >= 2 && robotPosition.posX == 3 && robotPosition.posY == 0 && robotPosition.rot == 0) {
+  } else if (v == "enemy" && robotPosition.posX == 3 && robotPosition.posY == 0 && robotPosition.rot == 0) {
     CurrentAction = RotateLeft;
     return;
   }
-  if (readUltra2() >= 1) { opponentAhead = true; }
+  if (v == "enemy") { opponentAhead = true; }
   if (opponentAhead == false) {
 
     if (y == 0 && (x == 1 || x == 3) && x_dist != 0) {  //&& robotPosition.posX!=2 case for god knows what
@@ -1150,7 +1188,7 @@ void makeDecision(int x, int y) {
   } else {  // HERE IS A LOGIC WHEN OPPONENT IS AHEAD
     // 0 in xdist and ydist is not possible because of can resetting
     if (abs(y_dist) < abs(x_dist)) {  // Priority for Y movement if distance is bigger or equal
-      if (y_dist > 0) {               // Up direction movement needed  (Y+)
+      if (y_dist >= 0) {               // Up direction movement needed  (Y+)
         if (robotPosition.rot == 180) {
           CurrentAction = RotateLeft;  // Rotation by 180
         } else if (robotPosition.rot == 90) {
@@ -1200,7 +1238,7 @@ void makeDecision(int x, int y) {
             CurrentAction = RotateRight;
           }
         }
-      } else if (x_dist < 0) {  // Left direction movement needed  (X-)
+      } else if (x_dist <= 0) {  // Left direction movement needed  (X-)
         if (robotPosition.rot == 0) {
           CurrentAction = RotateLeft;  // Rotation left (0 -> -90)
         } else if (robotPosition.rot == 180) {
@@ -1298,7 +1336,7 @@ String USARTRead() {
       }
 
       // Version with can shortening
-      if (i >= 2 && ((float)s_sum / i) >= 2.5 && ((float)u_sum / i) == 0) {
+      if (i >= 2 && ((float)s_sum / i) >= 2.5 && ((float)u_sum / i) == 0 && goingToBase == false) {
         howManyTimesShortenedMeasurement += 1;
         ignoreNext = true;
         s_avg = (float) s_sum / (i + 1);
